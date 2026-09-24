@@ -59,8 +59,8 @@ export function EmptyState({ title, body, action }: { title: string; body: strin
 }
 
 export function ErrorState({
-  title = 'Unable to load network data',
-  body = 'The operations feed did not respond. Your local session is unchanged.',
+  title = 'Unable to load dashboard data',
+  body = 'Check that the ISPBora API is running.',
   onRetry,
 }: {
   title?: string;

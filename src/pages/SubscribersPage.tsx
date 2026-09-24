@@ -32,7 +32,7 @@ export function SubscribersPage() {
         <Select value={connection} onChange={(event) => setConnection(event.target.value as typeof connection)}><option value="all">All connections</option><option value="online">Online</option><option value="offline">Offline</option><option value="unstable">Unstable</option></Select>
         <Button variant="primary" onClick={() => dispatch({ type: 'OPEN', dialog: { type: 'add-subscriber' } })}>Add Subscriber</Button>
       </div>
-      {rows.length === 0 ? <EmptyState title="No subscribers match" body="Adjust the search or filters to see the directory." /> : (
+      {rows.length === 0 ? <EmptyState title={state.subscribers.length === 0 ? 'No subscribers found.' : 'No subscribers match'} body={state.subscribers.length === 0 ? 'The subscriber directory is empty.' : 'Adjust the search or filters to see the directory.'} /> : (
         <>
           <div className="surface hidden overflow-x-auto md:block">
             <table className="data-table">

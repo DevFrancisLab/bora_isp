@@ -95,6 +95,10 @@ export function reducer(state: OpsState, action: Action): OpsState {
       return { ...state, forcePageError: false, pageRetry: state.pageRetry + 1 };
     case 'DISMISS_PROMPT':
       return { ...state, prompt: null };
+    case 'SIM_PENDING':
+      return { ...state, simulatingOutage: true };
+    case 'SIM_DONE':
+      return { ...state, simulatingOutage: false };
     case 'SIM_START':
       return stamp(
         { ...state, simulatingOutage: true, mapFocus: { areaId: action.areaId, nonce: state.mapFocus.nonce + 1 } },

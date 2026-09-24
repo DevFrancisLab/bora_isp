@@ -1,12 +1,12 @@
-import { createSeed } from '../data/seed';
+import { loadApiSnapshot } from './adapt';
 import type { OperationsSnapshot } from '../types';
 
 /**
- * Data access boundary.
- * Pages read the operations store, never this module.
- * Replace this function with a Django client, for example GET /api/operations/snapshot/.
+ * Operations data boundary.
+ * Pages read the store. This module loads Django REST data and maps it
+ * into the dashboard model. Plans, payments, and settings stay in the
+ * local catalog because those APIs are not part of this milestone.
  */
 export async function loadOperationsSnapshot(): Promise<OperationsSnapshot> {
-  await new Promise((resolve) => window.setTimeout(resolve, 320));
-  return createSeed();
+  return loadApiSnapshot();
 }

@@ -55,6 +55,8 @@ export type Action =
   | { type: 'DECLARE_INCIDENT'; areaId: AreaId }
   | { type: 'DISMISS_PROMPT' }
   | { type: 'SIM_START'; areaId: AreaId }
+  | { type: 'SIM_PENDING' }
+  | { type: 'SIM_DONE' }
   | { type: 'ACK_CASE'; id: string }
   | { type: 'ASSIGN_CASE'; id: string; assigneeId: string }
   | { type: 'REPLY_CASE'; id: string; channel: Channel; body: string }
@@ -106,6 +108,8 @@ export const emptySnapshot = (): OperationsSnapshot => ({
   hiddenOpenIssues: 0,
   hiddenAttention: 0,
   nextIncidentNumber: 110,
+  openIssues: 0,
+  activeOutages: 0,
 });
 
 export function initialState(): OpsState {

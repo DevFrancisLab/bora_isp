@@ -42,7 +42,7 @@ const subscribers: Subscriber[] = [
   { id: 'sub-david', accountId: 'SUB-00415', name: 'David Kipchoge', phone: '+254720667331', area: 'south-b', packageId: 'plan-home-10', status: 'active', connection: 'offline', lastSeen: rel(90), paymentStatus: 'overdue', balance: 1500, offlineDueToIncidentId: 'inc-102' },
   { id: 'sub-fatuma', accountId: 'SUB-00440', name: 'Fatuma Ali', phone: '+254711908221', area: 'south-b', packageId: 'plan-home-20', status: 'active', connection: 'unstable', lastSeen: rel(25), paymentStatus: 'pending', balance: 2000 },
   { id: 'sub-mercy', accountId: 'SUB-00488', name: 'Mercy Chebet', phone: '+254708334512', area: 'south-b', packageId: 'plan-home-10', status: 'active', connection: 'online', lastSeen: rel(8), paymentStatus: 'paid', balance: 0 },
-  { id: 'sub-samuel', accountId: 'SUB-00512', name: 'Samuel Kariuki', phone: '+254722100483', area: 'lavington', packageId: 'plan-biz-50', status: 'active', connection: 'online', lastSeen: rel(3), paymentStatus: 'paid', balance: 0 },
+  { id: 'sub-samuel', accountId: 'SUB-00512', name: 'Samuel Kariuki', phone: '+254707274525', area: 'lavington', packageId: 'plan-biz-50', status: 'active', connection: 'online', lastSeen: rel(3), paymentStatus: 'paid', balance: 0 },
   { id: 'sub-ann', accountId: 'SUB-00540', name: 'Ann Wairimu', phone: '+254733221760', area: 'lavington', packageId: 'plan-home-20', status: 'active', connection: 'online', lastSeen: rel(6), paymentStatus: 'paid', balance: 0 },
   { id: 'sub-daniel', accountId: 'SUB-00571', name: 'Daniel Kiptoo', phone: '+254701882345', area: 'lavington', packageId: 'plan-biz-100', status: 'active', connection: 'online', lastSeen: rel(2), paymentStatus: 'paid', balance: 0 },
   { id: 'sub-catherine', accountId: 'SUB-00590', name: 'Catherine Wambui', phone: '+254715440218', area: 'lavington', packageId: 'plan-home-10', status: 'active', connection: 'online', lastSeen: rel(9), paymentStatus: 'paid', balance: 0 },
@@ -403,5 +403,7 @@ export function createSeed(): OperationsSnapshot {
     hiddenOpenIssues: Math.max(0, 23 - unresolved),
     hiddenAttention: Math.max(0, 8 - high),
     nextIncidentNumber: 110,
+    openIssues: 23,
+    activeOutages: incidents.filter((item) => item.status !== 'resolved').length,
   };
 }

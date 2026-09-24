@@ -2,7 +2,7 @@ export type AreaId = 'kilimani' | 'south-b' | 'lavington' | 'kilimani-west' | 'c
 
 export type Channel = 'whatsapp' | 'voice' | 'ussd' | 'sms';
 
-export type SubscriberStatus = 'active' | 'suspended' | 'pending';
+export type SubscriberStatus = 'active' | 'suspended' | 'pending' | 'inactive';
 export type ConnectionState = 'online' | 'offline' | 'unstable';
 export type PaymentStatus = 'paid' | 'pending' | 'overdue';
 export type CaseStatus = 'open' | 'investigating' | 'assigned' | 'resolved';
@@ -92,6 +92,7 @@ export interface ServiceArea {
   id: AreaId;
   name: string;
   polygon: [number, number][];
+  remoteId?: number;
 }
 
 export interface FieldReport {
@@ -113,7 +114,7 @@ export interface CommMessage {
   channel: Channel;
   body: string;
   direction: 'inbound' | 'outbound';
-  status: 'delivered' | 'sent' | 'failed' | 'received';
+  status: 'delivered' | 'sent' | 'failed' | 'received' | 'pending';
   at: string;
   broadcast?: boolean;
 }
@@ -206,4 +207,6 @@ export interface OperationsSnapshot {
   hiddenOpenIssues: number;
   hiddenAttention: number;
   nextIncidentNumber: number;
+  openIssues: number;
+  activeOutages: number;
 }

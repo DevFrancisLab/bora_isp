@@ -28,7 +28,7 @@ export function SupportPage() {
       </div>
       <div className="grid min-h-0 flex-1 gap-3 lg:grid-cols-[280px_minmax(0,1fr)_280px]">
         <section className={`surface min-h-0 overflow-y-auto ${pane === 'queue' ? '' : 'hidden lg:block'}`}>
-          {ordered.map((item) => {
+          {ordered.length === 0 ? <EmptyState title="No support cases." body="New customer reports will appear in this queue." /> : ordered.map((item) => {
             const person = state.subscribers.find((sub) => sub.id === item.subscriberId);
             return (
               <button key={item.id} type="button" className={`block w-full border-b border-line px-3 py-3 text-left ${item.id === selected ? 'bg-elevated' : ''}`} onClick={() => { setParams({ case: item.id }); setPane('case'); }}>

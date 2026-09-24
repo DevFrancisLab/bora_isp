@@ -25,5 +25,11 @@ export function usePageLoad() {
     return () => window.clearTimeout(timer);
   }, [state.status, state.forcePageError, state.pageRetry]);
 
-  return { phase, retry: () => dispatch({ type: 'CLEAR_PAGE_ERROR' }) };
+  return {
+    phase,
+    retry: () => {
+      if (state.status === 'error') dispatch({ type: 'RETRY_BOOT' });
+      else dispatch({ type: 'CLEAR_PAGE_ERROR' });
+    },
+  };
 }

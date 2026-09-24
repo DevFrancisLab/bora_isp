@@ -118,6 +118,7 @@ function NotifyModal() {
   const incident = state.incidents.find((item) => dialog?.type === 'notify' && item.id === dialog.id);
   const [channel, setChannel] = useState<'whatsapp' | 'sms' | 'both'>('whatsapp');
   const [sent, setSent] = useState(false);
+  const [pending, setPending] = useState(false);
   if (dialog?.type !== 'notify' || !incident) return null;
   const label = channel === 'both' ? 'WhatsApp and SMS' : channel === 'whatsapp' ? 'WhatsApp' : 'SMS';
   return (
@@ -132,8 +133,8 @@ function NotifyModal() {
             event.preventDefault();
             const allowed = channel === 'both' ? state.settings.channels.whatsapp.connected || state.settings.channels.sms.connected : state.settings.channels[channel].connected;
             if (!allowed) { dispatch({ type: 'TOAST', message: 'Selected channel is disconnected. Reconnect it in Settings.', tone: 'warning' }); return; }
-            dispatch({ type: 'NOTIFY_INCIDENT', id: incident.id, channel });
-            setSent(true);
+            setPending(true);
+            void dispatch({ type: 'NOTIFY_INCIDENT', id: incident.id, channel }).then(() => setSent(true)).catch(() => undefined).finally(() => setPending(false));
           }}>
           <fieldset className="space-y-2">
             <legend className="mb-2 text-sm text-muted">Channel</legend>
@@ -145,7 +146,7 @@ function NotifyModal() {
             ))}
           </fieldset>
           <p className="mt-3 rounded-lg bg-bg p-3 text-sm text-muted">{state.settings.ispName}: We are investigating a service disruption in {AREA_LABEL[incident.area]}. Ref {incident.code}. Delivery via {label}.</p>
-          <Button className="mt-4" variant="primary" type="submit">Send</Button>
+          <Button className="mt-4" variant="primary" type="submit" disabled={pending}>{pending ? 'Queuing…' : 'Send'}</Button>
         </form>
       )}
     </Modal>
@@ -179,17 +180,35 @@ function SubscriberForm() {
 }
 
 function CaseForm() {
-  const { state, dispatch } = useOps();
+  const { state, dispatch, createCustomerReport } = useOps();
   const dialog = state.dialog;
   const [issue, setIssue] = useState('Internet Down');
   const [channel, setChannel] = useState<'whatsapp' | 'voice' | 'sms' | 'ussd'>('whatsapp');
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState('');
   if (dialog?.type !== 'create-case') return null;
+  const subscriber = state.subscribers.find((item) => item.id === dialog.subscriberId);
   return (
-    <Modal open title="Create support case" onClose={() => dispatch({ type: 'CLOSE' })}>
-      <form className="space-y-3" onSubmit={(event) => { event.preventDefault(); dispatch({ type: 'CUSTOMER_REPORT', subscriberId: dialog.subscriberId, issue, channel, reveal: true }); }}>
+    <Modal open title="Create support case" onClose={() => { if (!pending) dispatch({ type: 'CLOSE' }); }}>
+      <form className="space-y-3" onSubmit={(event) => {
+        event.preventDefault();
+        if (!subscriber) { setError('Select a subscriber before creating a case.'); return; }
+        setPending(true);
+        setError('');
+        const channelLabel = channel === 'whatsapp' ? 'WhatsApp' : channel === 'voice' ? 'voice' : channel.toUpperCase();
+        void createCustomerReport({
+          subscriberId: subscriber.id,
+          issue,
+          source: 'DASHBOARD',
+          description: `${subscriber.name} reports that ${issue.toLowerCase()}. The report was filed from the dashboard after contact on ${channelLabel}.`,
+        }).catch((reason: unknown) => {
+          setError(reason instanceof Error ? reason.message : 'Unable to create the support case.');
+        }).finally(() => setPending(false));
+      }}>
         <Field label="Issue"><Select value={issue} onChange={(event) => setIssue(event.target.value)}><option>Internet Down</option><option>Slow Internet</option><option>Connection Unstable</option></Select></Field>
         <Field label="Channel"><Select value={channel} onChange={(event) => setChannel(event.target.value as typeof channel)}>{Object.entries(CHANNEL_LABEL).map(([key, label]) => <option key={key} value={key}>{label}</option>)}</Select></Field>
-        <Button variant="primary" type="submit">Create case</Button>
+        {error ? <p className="text-sm text-crit" role="alert">{error}</p> : null}
+        <Button variant="primary" type="submit" disabled={pending}>{pending ? 'Creating…' : 'Create case'}</Button>
       </form>
     </Modal>
   );
@@ -407,7 +426,7 @@ export function CaseBody({ id, onOpen }: { id: string; onOpen?: () => void }) {
       <div className="space-y-2 rounded-lg bg-bg p-3">
         {supportCase.messages.map((message) => (
           <div key={message.id} className={message.sender === 'system' ? 'text-xs text-info' : message.sender === 'agent' ? 'text-sm' : 'text-sm text-muted'}>
-            <span className="mr-2 text-[11px] uppercase text-faint">{message.sender === 'agent' ? 'BoraISP' : message.sender}</span>
+            <span className="mr-2 text-[11px] uppercase text-faint">{message.sender === 'agent' ? 'ISPBora' : message.sender}</span>
             {message.body}
           </div>
         ))}

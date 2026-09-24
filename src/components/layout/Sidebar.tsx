@@ -39,7 +39,7 @@ export function Sidebar({ mobile = false, onNavigate }: { mobile?: boolean; onNa
             </svg>
           </span>
           <span>
-            <span className="block text-sm font-semibold tracking-tight">BoraISP</span>
+            <span className="block text-sm font-semibold tracking-tight">ISPBora</span>
             <span className="block text-xs text-faint">ISP Operations</span>
           </span>
         </div>

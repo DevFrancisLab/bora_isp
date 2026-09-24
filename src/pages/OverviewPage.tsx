@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AlertTriangle, LifeBuoy, Users, Wifi } from 'lucide-react';
-import { attentionCount, openIssueCount, activeIncidents, areaHealth, healthLabel, incidentForArea, primaryIncident, visibleReports } from '../domain/network';
+import { attentionCount, activeIncidents, areaHealth, healthLabel, incidentForArea, primaryIncident, visibleReports } from '../domain/network';
 import { AREA_LABEL } from '../domain/labels';
 import { formatClock, formatNumber, onlinePercent, timeAgo } from '../domain/format';
 import { usePageLoad } from '../hooks/usePageLoad';
@@ -18,7 +18,7 @@ export function OverviewPage() {
   if (phase === 'loading') return <OverviewSkeleton />;
   const active = state.census.active;
   const online = state.census.online;
-  const issues = openIssueCount(state.cases, state.hiddenOpenIssues);
+  const issues = state.openIssues;
   const attention = attentionCount(state.cases, state.hiddenAttention);
   const incidents = activeIncidents(state.incidents);
   const affected = incidents.reduce((sum, item) => sum + item.affectedSubscribers, 0);
@@ -26,12 +26,12 @@ export function OverviewPage() {
   const recent = [...state.cases].sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt)).slice(0, 6);
   return (
     <div className="space-y-4">
-      {state.simulatingOutage ? <div className="rounded-lg border border-warn/40 bg-warn/10 px-3 py-2 text-sm">Customer reports are arriving. BoraISP is clustering them into a possible outage.</div> : null}
+      {state.simulatingOutage ? <div className="rounded-lg border border-warn/40 bg-warn/10 px-3 py-2 text-sm">Customer reports are arriving. ISPBora is clustering them into a possible outage.</div> : null}
       <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <Kpi icon={<Users size={16} />} label="Active Subscribers" value={formatNumber(active)} detail="+4.8% vs last month" tone="text-brand" onClick={() => navigate('/dashboard/subscribers')} />
+        <Kpi icon={<Users size={16} />} label="Active Subscribers" value={formatNumber(active)} detail="Active accounts in the database" tone="text-brand" onClick={() => navigate('/dashboard/subscribers')} />
         <Kpi icon={<Wifi size={16} />} label="Online Subscribers" value={formatNumber(online)} detail={`${onlinePercent(active, online)}% online`} tone="text-brand" onClick={() => navigate('/dashboard/subscribers')} />
         <Kpi icon={<LifeBuoy size={16} />} label="Open Issues" value={String(issues)} detail={`${attention} require attention`} tone="text-warn" onClick={() => navigate('/dashboard/support')} />
-        <Kpi icon={<AlertTriangle size={16} />} label="Active Outages" value={String(incidents.length)} detail={`${affected} subscribers affected`} tone="text-crit" onClick={() => navigate('/dashboard/network')} />
+        <Kpi icon={<AlertTriangle size={16} />} label="Active Outages" value={String(state.activeOutages)} detail={`${affected} subscribers affected`} tone="text-crit" onClick={() => navigate('/dashboard/network')} />
       </section>
       <section className="grid gap-4 xl:grid-cols-[minmax(0,1.7fr)_minmax(300px,0.85fr)]">
         <NetworkMap

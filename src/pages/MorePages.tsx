@@ -23,7 +23,7 @@ export function MessagesPage() {
         <input className="input md:max-w-xs" placeholder="Filter messages" value={query} onChange={(event) => setQuery(event.target.value)} />
         <Button variant="primary" onClick={() => dispatch({ type: 'OPEN', dialog: { type: 'message' } })}>Send Message</Button>
       </div>
-      {rows.length === 0 ? <EmptyState title="No messages" body="Nothing in this channel matches the current filter." /> : (
+      {rows.length === 0 ? <EmptyState title={state.messages.length === 0 ? 'No messages.' : 'No messages'} body={state.messages.length === 0 ? 'Outbound and inbound records will appear here.' : 'Nothing in this channel matches the current filter.'} /> : (
         <div className="surface overflow-x-auto">
           <table className="data-table">
             <thead><tr><th className="th">Customer</th><th className="th">Channel</th><th className="th">Message</th><th className="th">Direction</th><th className="th">Status</th><th className="th">Time</th></tr></thead>

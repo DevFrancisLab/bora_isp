@@ -31,7 +31,7 @@ export function Header({ onMenu }: { onMenu: () => void }) {
   const critical = incidents.filter((item) => item.severity === 'critical').length;
 
   useEffect(() => {
-    document.title = `${meta.title} · BoraISP`;
+    document.title = `${meta.title} · ISPBora`;
   }, [meta.title]);
 
   useEffect(() => {
@@ -116,8 +116,8 @@ export function Header({ onMenu }: { onMenu: () => void }) {
                   <span className="block text-sm">Simulate Customer Report</span>
                   <span className="block text-xs text-muted">WhatsApp report, case, map marker, and alert</span>
                 </button>
-                <button type="button" disabled={state.simulatingOutage} className="block w-full rounded-lg px-3 py-2 text-left hover:bg-card disabled:opacity-50" onClick={() => { simulateOutage(); setDemoOpen(false); }}>
-                  <span className="block text-sm">Simulate Outage</span>
+                <button type="button" disabled={state.simulatingOutage} className="block w-full rounded-lg px-3 py-2 text-left hover:bg-card disabled:opacity-50" onClick={() => { void simulateOutage().finally(() => setDemoOpen(false)); }}>
+                  <span className="block text-sm">{state.simulatingOutage ? 'Simulating…' : 'Simulate Outage'}</span>
                   <span className="block text-xs text-muted">Cluster reports, then open an incident</span>
                 </button>
                 <button type="button" className="block w-full rounded-lg px-3 py-2 text-left hover:bg-card" onClick={() => { dispatch({ type: 'FORCE_PAGE_ERROR' }); setDemoOpen(false); }}>
@@ -139,7 +139,7 @@ export function Header({ onMenu }: { onMenu: () => void }) {
                   <button type="button" className="text-xs text-brand" onClick={() => dispatch({ type: 'MARK_ALL_READ' })}>Mark all as read</button>
                 </div>
                 <div className="max-h-80 overflow-y-auto">
-                  {state.notifications.length === 0 ? <p className="px-3 py-6 text-sm text-muted">You are up to date.</p> : null}
+                  {state.notifications.length === 0 ? <p className="px-3 py-6 text-sm text-muted">No notifications.</p> : null}
                   {state.notifications.map((item) => (
                     <button
                       key={item.id}

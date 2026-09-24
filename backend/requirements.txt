@@ -1,0 +1,6 @@
+Django>=5.2,<6.3
+djangorestframework>=3.15,<4
+django-cors-headers>=4.6,<5
+psycopg[binary]>=3.2,<4
+python-dotenv>=1.0,<2
+africastalking>=1.2,<2
