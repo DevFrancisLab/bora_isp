@@ -1,0 +1,229 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+  body {
+    @apply bg-bg text-ink font-sans antialiased;
+  }
+  :focus-visible {
+    outline: 2px solid #22c55e;
+    outline-offset: 2px;
+  }
+  button:focus:not(:focus-visible),
+  a:focus:not(:focus-visible) {
+    outline: none;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation: none !important;
+      transition: none !important;
+    }
+  }
+}
+
+@layer components {
+  .surface {
+    @apply rounded-xl border border-line bg-card;
+  }
+  .input {
+    @apply w-full rounded-lg border border-line bg-bg px-3 py-2 text-sm text-ink placeholder:text-faint;
+  }
+  .input:focus {
+    @apply border-brand outline-none;
+  }
+  .nav-link {
+    @apply flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-muted transition-colors hover:bg-elevated hover:text-ink;
+  }
+  .nav-link-active {
+    @apply bg-elevated text-ink;
+  }
+  .badge {
+    @apply inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium capitalize;
+  }
+  .btn {
+    @apply inline-flex cursor-pointer items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors disabled:pointer-events-none disabled:opacity-40;
+  }
+  .btn-primary {
+    background: #22c55e;
+    color: #05210f;
+  }
+  .btn-primary:hover {
+    background: #16a34a;
+  }
+  .btn-secondary {
+    @apply border border-line bg-elevated text-ink hover:border-muted/40;
+  }
+  .btn-danger {
+    @apply border border-crit/30 bg-crit/10 text-crit hover:bg-crit/20;
+  }
+  .btn-ghost {
+    @apply text-muted hover:bg-elevated hover:text-ink;
+  }
+  .th {
+    @apply whitespace-nowrap px-3 py-2 text-left text-xs font-medium uppercase tracking-wide text-faint;
+  }
+  .td {
+    @apply px-3 py-3 align-middle text-sm text-ink;
+  }
+  .data-table {
+    @apply w-full border-collapse text-left;
+  }
+  .data-table tbody tr {
+    @apply border-t border-line;
+  }
+  .data-table tbody tr:hover {
+    background: rgba(27, 36, 33, 0.65);
+  }
+}
+
+.page-in {
+  animation: fade 180ms ease;
+}
+.modal-pop {
+  animation: rise 160ms ease;
+}
+.drawer-in {
+  animation: slide 200ms ease;
+}
+.toast-in {
+  animation: rise 160ms ease;
+}
+
+@keyframes fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes slide {
+  from {
+    opacity: 0.5;
+    transform: translateX(16px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes shimmer {
+  0% {
+    background-position: 100% 0;
+  }
+  100% {
+    background-position: 0 0;
+  }
+}
+.skeleton {
+  background: linear-gradient(90deg, #1b2421 25%, #24302c 37%, #1b2421 63%);
+  background-size: 400% 100%;
+  animation: shimmer 1.2s ease infinite;
+  border-radius: 8px;
+}
+
+.leaflet-container {
+  background: #101615;
+  font-family: inherit;
+  height: 100%;
+  width: 100%;
+}
+.leaflet-popup-content-wrapper,
+.leaflet-popup-tip {
+  background: #1b2421;
+  color: #f3f7f5;
+  box-shadow: none;
+}
+.leaflet-popup-content-wrapper {
+  border: 1px solid #26322e;
+  border-radius: 12px;
+}
+.leaflet-popup-content {
+  margin: 12px 14px;
+  min-width: 200px;
+}
+.leaflet-bar a {
+  background: #151c1a;
+  color: #f3f7f5;
+  border-color: #26322e;
+}
+.leaflet-control-attribution {
+  background: rgba(11, 15, 14, 0.85) !important;
+  color: #94a39d !important;
+  font-size: 10px !important;
+}
+.leaflet-control-attribution a {
+  color: #94a39d !important;
+}
+.site-pin-wrap {
+  background: transparent;
+  border: 0;
+}
+.site-pin {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transform: translate(-6px, -6px);
+}
+.site-pin .dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+  border: 2px solid #0b0f0e;
+  box-shadow: 0 0 0 1px rgba(243, 247, 245, 0.25);
+}
+.site-pin .name {
+  background: #151c1a;
+  border: 1px solid #26322e;
+  color: #f3f7f5;
+  font-size: 11px;
+  line-height: 1;
+  padding: 4px 6px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+.map-btn {
+  margin-top: 8px;
+  width: 100%;
+  border: 0;
+  border-radius: 8px;
+  background: #22c55e;
+  color: #05210f;
+  font-weight: 600;
+  font-size: 12px;
+  padding: 6px 8px;
+  cursor: pointer;
+}
+.map-kicker {
+  color: #94a39d;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.map-title {
+  font-weight: 600;
+  margin-top: 2px;
+}
+.map-line {
+  margin-top: 4px;
+  font-size: 13px;
+  color: #f3f7f5;
+}
