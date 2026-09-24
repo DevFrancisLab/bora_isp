@@ -258,7 +258,7 @@ export function reducer(state: OpsState, action: Action): OpsState {
       );
     }
     case 'CUSTOMER_REPORT':
-      return addReport(state, action.subscriberId, action.issue, action.channel);
+      return addReport(state, action.subscriberId, action.issue, action.channel, action.reveal);
     case 'DECLARE_INCIDENT':
       return declareIncident(state, action.areaId);
     case 'ACK_CASE': {
@@ -318,6 +318,7 @@ export function reducer(state: OpsState, action: Action): OpsState {
         ...item,
         priority: 'high',
         escalated: true,
+        status: item.status === 'open' ? 'investigating' : item.status,
         messages: [...item.messages, { id: uid('cm'), sender: 'system', body: 'Escalated to network operations.', at }],
       }));
       const openInArea = next.cases.filter((item) => item.area === supportCase.area && item.status !== 'resolved').length;
@@ -442,7 +443,7 @@ function updateCase(state: OpsState, id: string, fn: (item: SupportCase) => Supp
   return { ...state, cases: state.cases.map((item) => (item.id === id ? fn(item) : item)) };
 }
 
-function addReport(state: OpsState, subscriberId: string, issue: string, channel: Channel): OpsState {
+function addReport(state: OpsState, subscriberId: string, issue: string, channel: Channel, reveal?: boolean): OpsState {
   const subscriber = state.subscribers.find((item) => item.id === subscriberId);
   if (!subscriber) return state;
   const at = nowIso();
@@ -491,6 +492,7 @@ function addReport(state: OpsState, subscriberId: string, issue: string, channel
     };
   }
   const areaName = AREA_LABEL[subscriber.area];
+  if (reveal) next = { ...next, dialog: { type: 'case', id: supportCase.id } };
   return stamp(next, {
     activity: `Customer report received from ${channel === 'whatsapp' ? 'WhatsApp' : channel === 'voice' ? 'Voice' : channel.toUpperCase()}`,
     toast: 'Customer report received',

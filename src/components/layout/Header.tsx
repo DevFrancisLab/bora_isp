@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Bell, Menu, PlayCircle, Search } from 'lucide-react';
 import { formatClock, timeAgo } from '../../domain/format';
@@ -45,6 +45,32 @@ export function Header({ onMenu }: { onMenu: () => void }) {
     return () => window.removeEventListener('keydown', onKey);
   }, [dispatch]);
 
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!notesOpen && !demoOpen && !userOpen) return;
+    const onPointer = (event: MouseEvent) => {
+      if (!menuRef.current?.contains(event.target as Node)) {
+        setNotesOpen(false);
+        setDemoOpen(false);
+        setUserOpen(false);
+      }
+    };
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setNotesOpen(false);
+        setDemoOpen(false);
+        setUserOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', onPointer);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', onPointer);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [notesOpen, demoOpen, userOpen]);
+
   const status = useMemo(() => {
     if (state.status !== 'ready') return { label: 'Checking network', className: 'text-muted' };
     if (critical) return { label: `${critical} outage${critical > 1 ? 's' : ''}`, className: 'text-crit' };
@@ -75,7 +101,7 @@ export function Header({ onMenu }: { onMenu: () => void }) {
           <h1 className="truncate text-lg font-semibold md:text-xl">{meta.title}</h1>
           <p className="text-sm text-muted">{meta.description}</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div ref={menuRef} className="flex shrink-0 items-center gap-1 sm:gap-2">
           <button type="button" className="hidden items-center gap-2 rounded-lg border border-line bg-card px-3 py-2 text-sm text-faint md:flex" onClick={() => dispatch({ type: 'OPEN', dialog: { type: 'search' } })}>
             <Search size={14} />
             Search
@@ -104,7 +130,7 @@ export function Header({ onMenu }: { onMenu: () => void }) {
           <div className="relative">
             <IconButton label="Notifications" onClick={() => { setNotesOpen((open) => !open); setDemoOpen(false); setUserOpen(false); }}>
               <Bell size={16} />
-              {unread ? <span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-brand" /> : null}
+              {unread ? <span className="absolute -right-1 -top-1 grid h-4 min-w-4 place-items-center rounded-full bg-brand px-1 text-[10px] font-semibold text-[#05210F]">{unread > 9 ? '9+' : unread}</span> : null}
             </IconButton>
             {notesOpen ? (
               <div className="absolute right-0 z-40 mt-2 w-[min(22rem,calc(100vw-2rem))] rounded-xl border border-line bg-elevated shadow-xl">
@@ -126,7 +152,10 @@ export function Header({ onMenu }: { onMenu: () => void }) {
                         {item.title}
                       </span>
                       <span className="mt-1 block text-xs text-muted">{item.description}</span>
-                      <span className="mt-1 block font-mono text-[11px] text-faint">{formatClock(item.at)} · {timeAgo(item.at)}</span>
+                      <span className="mt-1 flex items-center justify-between gap-2 font-mono text-[11px] text-faint">
+                        <span>{formatClock(item.at)} · {timeAgo(item.at)}</span>
+                        {!item.read ? <span className="text-brand" onClick={(event) => { event.stopPropagation(); dispatch({ type: 'MARK_READ', id: item.id }); }}>Mark as read</span> : null}
+                      </span>
                     </button>
                   ))}
                 </div>

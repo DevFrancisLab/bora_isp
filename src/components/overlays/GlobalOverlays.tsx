@@ -52,14 +52,17 @@ function SearchDialog() {
   const results = useMemo(() => {
     const q = query.trim().toLowerCase();
     const items: { key: string; group: string; title: string; meta: string; run: () => void }[] = [];
-    const subscribers = state.subscribers.filter((item) => !q || `${item.name} ${item.phone} ${item.accountId}`.toLowerCase().includes(q) || item.phone.replace(/\D/g, '').includes(q.replace(/\D/g, ''))).slice(0, 5);
+    const digits = q.replace(/\D/g, '');
+    const hit = (text: string) => !q || text.toLowerCase().includes(q);
+    const phoneHit = (phone: string) => digits.length >= 3 && phone.replace(/\D/g, '').includes(digits);
+    const subscribers = state.subscribers.filter((item) => hit(`${item.name} ${item.accountId} ${AREA_LABEL[item.area]}`) || phoneHit(item.phone)).slice(0, 5);
     subscribers.forEach((item) => items.push({ key: item.id, group: 'Subscriber', title: item.name, meta: `${item.accountId} · ${AREA_LABEL[item.area]}`, run: () => { navigate('/dashboard/subscribers'); dispatch({ type: 'OPEN', dialog: { type: 'subscriber', id: item.id } }); } }));
-    state.incidents.filter((item) => !q || `${item.code} ${item.title}`.toLowerCase().includes(q)).slice(0, 4).forEach((item) => items.push({ key: item.id, group: 'Incident', title: `${item.code} · ${item.title}`, meta: item.status, run: () => { navigate('/dashboard/network'); dispatch({ type: 'OPEN', dialog: { type: 'incident', id: item.id } }); } }));
-    state.cases.filter((item) => { const person = state.subscribers.find((sub) => sub.id === item.subscriberId); return !q || `${person?.name ?? ''} ${item.issue}`.toLowerCase().includes(q); }).slice(0, 4).forEach((item) => {
+    state.incidents.filter((item) => hit(`${item.code} ${item.title} ${AREA_LABEL[item.area]}`)).slice(0, 4).forEach((item) => items.push({ key: item.id, group: 'Incident', title: `${item.code} · ${item.title}`, meta: `${AREA_LABEL[item.area]} · ${item.status}`, run: () => { navigate('/dashboard/network'); dispatch({ type: 'OPEN', dialog: { type: 'incident', id: item.id } }); } }));
+    state.cases.filter((item) => { const person = state.subscribers.find((sub) => sub.id === item.subscriberId); return hit(`${person?.name ?? ''} ${item.issue} ${AREA_LABEL[item.area]}`); }).slice(0, 4).forEach((item) => {
       const person = state.subscribers.find((sub) => sub.id === item.subscriberId);
       items.push({ key: item.id, group: 'Support Case', title: `${person?.name ?? 'Customer'} — ${item.issue}`, meta: AREA_LABEL[item.area], run: () => { dispatch({ type: 'CLOSE' }); navigate(`/dashboard/support?case=${item.id}`); } });
     });
-    state.sites.filter((item) => !q || item.name.toLowerCase().includes(q)).slice(0, 4).forEach((item) => items.push({ key: item.id, group: 'Network Site', title: item.name, meta: item.areaIds.map((id) => AREA_LABEL[id]).join(', '), run: () => { navigate('/dashboard/network'); dispatch({ type: 'OPEN', dialog: { type: 'site', id: item.id } }); } }));
+    state.sites.filter((item) => hit(`${item.name} ${item.areaIds.map((id) => AREA_LABEL[id]).join(' ')}`)).slice(0, 4).forEach((item) => items.push({ key: item.id, group: 'Network Site', title: item.name, meta: item.areaIds.map((id) => AREA_LABEL[id]).join(', '), run: () => { navigate('/dashboard/network'); dispatch({ type: 'OPEN', dialog: { type: 'site', id: item.id } }); } }));
     return items;
   }, [dispatch, navigate, query, state.cases, state.incidents, state.sites, state.subscribers]);
 
@@ -125,7 +128,13 @@ function NotifyModal() {
           <Button className="mt-4" variant="primary" onClick={() => { setSent(false); dispatch({ type: 'CLOSE' }); }}>Done</Button>
         </div>
       ) : (
-        <form onSubmit={(event) => { event.preventDefault(); dispatch({ type: 'NOTIFY_INCIDENT', id: incident.id, channel }); setSent(true); }}>
+        <form onSubmit={(event) => {
+            event.preventDefault();
+            const allowed = channel === 'both' ? state.settings.channels.whatsapp.connected || state.settings.channels.sms.connected : state.settings.channels[channel].connected;
+            if (!allowed) { dispatch({ type: 'TOAST', message: 'Selected channel is disconnected. Reconnect it in Settings.', tone: 'warning' }); return; }
+            dispatch({ type: 'NOTIFY_INCIDENT', id: incident.id, channel });
+            setSent(true);
+          }}>
           <fieldset className="space-y-2">
             <legend className="mb-2 text-sm text-muted">Channel</legend>
             {(['whatsapp', 'sms', 'both'] as const).map((option) => (
@@ -177,7 +186,7 @@ function CaseForm() {
   if (dialog?.type !== 'create-case') return null;
   return (
     <Modal open title="Create support case" onClose={() => dispatch({ type: 'CLOSE' })}>
-      <form className="space-y-3" onSubmit={(event) => { event.preventDefault(); dispatch({ type: 'CUSTOMER_REPORT', subscriberId: dialog.subscriberId, issue, channel }); dispatch({ type: 'CLOSE' }); }}>
+      <form className="space-y-3" onSubmit={(event) => { event.preventDefault(); dispatch({ type: 'CUSTOMER_REPORT', subscriberId: dialog.subscriberId, issue, channel, reveal: true }); }}>
         <Field label="Issue"><Select value={issue} onChange={(event) => setIssue(event.target.value)}><option>Internet Down</option><option>Slow Internet</option><option>Connection Unstable</option></Select></Field>
         <Field label="Channel"><Select value={channel} onChange={(event) => setChannel(event.target.value as typeof channel)}>{Object.entries(CHANNEL_LABEL).map(([key, label]) => <option key={key} value={key}>{label}</option>)}</Select></Field>
         <Button variant="primary" type="submit">Create case</Button>
@@ -376,7 +385,7 @@ export function CaseBody({ id, onOpen }: { id: string; onOpen?: () => void }) {
       <div>
         <p className="font-semibold">{subscriber?.name}</p>
         <p className="text-sm text-muted">{supportCase.issue} · {AREA_LABEL[supportCase.area]} · {CHANNEL_LABEL[supportCase.channel]}</p>
-        <div className="mt-2 flex gap-2"><Badge value={supportCase.status} /><Badge value={supportCase.priority} /></div>
+        <div className="mt-2 flex flex-wrap gap-2"><Badge value={supportCase.status} /><Badge value={supportCase.priority} />{supportCase.escalated ? <span className="badge bg-warn/15 text-warn">Escalated</span> : null}</div>
       </div>
       {incident ? <button type="button" className="w-full rounded-lg border border-crit/40 bg-crit/10 px-3 py-2 text-left text-sm" onClick={() => dispatch({ type: 'OPEN', dialog: { type: 'incident', id: incident.id } })}>Active incident {incident.code} in {AREA_LABEL[incident.area]} · {incident.status}</button> : null}
       {state.prompt?.areaId === supportCase.area ? (

@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Outlet } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { Outlet, useLocation } from 'react-router-dom';
 import { useOps } from '../../store/OpsProvider';
 import { GlobalOverlays } from '../overlays/GlobalOverlays';
 import { Header } from './Header';
@@ -8,6 +8,8 @@ import { Sidebar } from './Sidebar';
 export function DashboardLayout() {
   const { state, dispatch } = useOps();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const { pathname } = useLocation();
+  useEffect(() => setMobileOpen(false), [pathname]);
   return (
     <div className="min-h-screen bg-bg text-ink">
       <a href="#main" className="sr-only focus:not-sr-only focus:absolute focus:left-3 focus:top-3 focus:z-50 focus:rounded-md focus:bg-brand focus:px-3 focus:py-2 focus:text-[#05210F]">Skip to content</a>

@@ -51,7 +51,7 @@ export type Action =
   | { type: 'ASSIGN_INCIDENT'; id: string; technicianId: string }
   | { type: 'NOTIFY_INCIDENT'; id: string; channel: 'whatsapp' | 'sms' | 'both' }
   | { type: 'RESOLVE_INCIDENT'; id: string }
-  | { type: 'CUSTOMER_REPORT'; subscriberId: string; issue: string; channel: Channel }
+  | { type: 'CUSTOMER_REPORT'; subscriberId: string; issue: string; channel: Channel; reveal?: boolean }
   | { type: 'DECLARE_INCIDENT'; areaId: AreaId }
   | { type: 'DISMISS_PROMPT' }
   | { type: 'SIM_START'; areaId: AreaId }

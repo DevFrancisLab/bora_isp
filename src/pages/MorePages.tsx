@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { CHANNEL_LABEL, METHOD_LABEL } from '../domain/labels';
 import { formatKes, formatWhen, timeAgo } from '../domain/format';
 import { usePageLoad } from '../hooks/usePageLoad';
@@ -123,7 +123,13 @@ export function SettingsPage() {
   const { phase, retry } = usePageLoad();
   const { state, dispatch } = useOps();
   const [profile, setProfile] = useState(state.settings);
-  useEffect(() => setProfile(state.settings), [state.settings]);
+  const sawProfile = useRef(state.settings.ispName.length > 0);
+  useEffect(() => {
+    if (state.status === 'ready' && !sawProfile.current && state.settings.ispName) {
+      sawProfile.current = true;
+      setProfile(state.settings);
+    }
+  }, [state.settings, state.status]);
   if (phase === 'error') return <ErrorState onRetry={retry} />;
   if (phase === 'loading') return <Skeleton className="h-96" />;
   const set = (key: 'ispName' | 'phone' | 'email' | 'location', value: string) => setProfile((current) => ({ ...current, [key]: value }));
