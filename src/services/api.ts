@@ -228,6 +228,14 @@ export const getNotifications = () => getList<ApiNotification>('/api/notificatio
 export const getDashboardSummary = () => request<ApiDashboardSummary>('/api/dashboard/summary/');
 export const getTechnicians = () => getList<ApiTechnician>('/api/technicians/');
 
+export function createTechnician(body: { name: string; phone_number: string; email?: string; service_area: number }) {
+  return request<ApiTechnician>('/api/technicians/', { method: 'POST', body: JSON.stringify(body) });
+}
+
+export function deleteTechnician(id: number) {
+  return request<void>(`/api/technicians/${id}/`, { method: 'DELETE' });
+}
+
 export const acknowledgeIncident = (id: number) => request<ApiIncident>(`/api/incidents/${id}/acknowledge/`, { method: 'POST' });
 export const assignIncident = (id: number, technicianId: number) =>
   request<ApiIncident>(`/api/incidents/${id}/assign/`, { method: 'POST', body: JSON.stringify({ technician_id: technicianId }) });

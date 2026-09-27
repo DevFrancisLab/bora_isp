@@ -159,6 +159,10 @@ export interface Technician {
   id: string;
   name: string;
   phone: string;
+  email?: string;
+  status?: string;
+  serviceAreaId?: string;
+  serviceAreaName?: string;
 }
 
 export interface Activity {

@@ -4,6 +4,7 @@ import { formatKes, formatWhen, timeAgo } from '../domain/format';
 import { usePageLoad } from '../hooks/usePageLoad';
 import { useOps } from '../store/OpsProvider';
 import type { Channel } from '../types';
+import { ApiError, createTechnician, deleteTechnician } from '../services/api';
 import { Badge, Button, EmptyState, ErrorState, Skeleton } from '../components/ui/primitives';
 
 export function MessagesPage() {
@@ -119,9 +120,22 @@ export function PaymentsPage() {
   );
 }
 
+function technicianError(error: unknown, fallback: string) {
+  if (!(error instanceof ApiError)) return fallback;
+  const match = error.message.match(/"detail"\s*:\s*"([^"]+)"/);
+  if (match) return match[1];
+  if (error.message.includes('phone_number')) return 'Enter a valid Kenyan phone number that is not already in use.';
+  if (error.message.includes('service_area')) return 'Choose a service area.';
+  if (error.message.includes('name')) return "Enter the technician's name.";
+  return fallback;
+}
+
 export function SettingsPage() {
   const { phase, retry } = usePageLoad();
-  const { state, dispatch } = useOps();
+  const { state, dispatch, reload } = useOps();
+  const [technicianForm, setTechnicianForm] = useState({ name: '', phone: '', email: '', serviceArea: '' });
+  const [savingTechnician, setSavingTechnician] = useState(false);
+  const [pendingDelete, setPendingDelete] = useState<string | null>(null);
   const [profile, setProfile] = useState(state.settings);
   const sawProfile = useRef(state.settings.ispName.length > 0);
   useEffect(() => {
@@ -133,6 +147,46 @@ export function SettingsPage() {
   if (phase === 'error') return <ErrorState onRetry={retry} />;
   if (phase === 'loading') return <Skeleton className="h-96" />;
   const set = (key: 'ispName' | 'phone' | 'email' | 'location', value: string) => setProfile((current) => ({ ...current, [key]: value }));
+  const areas = state.areas.filter((area) => area.remoteId);
+
+  async function addTechnician() {
+    const area = areas.find((item) => String(item.remoteId) === technicianForm.serviceArea);
+    if (!technicianForm.name.trim() || !technicianForm.phone.trim() || !area?.remoteId) {
+      dispatch({ type: 'TOAST', message: 'Enter a name, phone number, and service area.', tone: 'warning' });
+      return;
+    }
+    setSavingTechnician(true);
+    try {
+      await createTechnician({
+        name: technicianForm.name.trim(),
+        phone_number: technicianForm.phone.trim(),
+        email: technicianForm.email.trim(),
+        service_area: area.remoteId,
+      });
+      setTechnicianForm({ name: '', phone: '', email: '', serviceArea: '' });
+      await reload();
+      dispatch({ type: 'TOAST', message: 'Technician added', tone: 'success' });
+    } catch (error) {
+      dispatch({ type: 'TOAST', message: technicianError(error, 'The technician could not be added.'), tone: 'warning' });
+    } finally {
+      setSavingTechnician(false);
+    }
+  }
+
+  async function removeTechnician(id: string) {
+    setSavingTechnician(true);
+    try {
+      await deleteTechnician(Number(id));
+      setPendingDelete(null);
+      await reload();
+      dispatch({ type: 'TOAST', message: 'Technician removed', tone: 'success' });
+    } catch (error) {
+      dispatch({ type: 'TOAST', message: technicianError(error, 'The technician could not be removed.'), tone: 'warning' });
+    } finally {
+      setSavingTechnician(false);
+    }
+  }
+
   return (
     <div className="grid gap-4 xl:grid-cols-2">
       <section className="surface space-y-3 p-4">
@@ -171,17 +225,35 @@ export function SettingsPage() {
           </div>
         ))}
       </section>
-      <section className="surface space-y-3 p-4">
-        <div className="flex items-center justify-between">
-          <h2 className="font-semibold">Team</h2>
-          <Button size="sm" onClick={() => dispatch({ type: 'OPEN', dialog: { type: 'add-team' } })}>Add member</Button>
+      <section className="surface space-y-3 p-4 xl:col-span-2">
+        <div>
+          <h2 className="font-semibold">Technicians</h2>
+          <p className="mt-1 text-sm text-muted">These people come from the operations database and can be assigned to incidents.</p>
         </div>
-        <p className="text-sm text-muted">Technicians added here can be assigned to incidents.</p>
-        {state.team.map((member) => (
-          <div key={member.id} className="flex items-center justify-between text-sm">
-            <span>{member.name}<span className="block text-xs text-faint">{member.phone}</span></span>
-            <Badge value={member.role === 'Technician' ? 'assigned' : member.role === 'Admin' ? 'active' : 'open'} />
-            <span className="text-muted">{member.role}</span>
+        <div className="grid gap-2 md:grid-cols-4">
+          <input className="input" placeholder="Name" value={technicianForm.name} onChange={(event) => setTechnicianForm((current) => ({ ...current, name: event.target.value }))} />
+          <input className="input" placeholder="Phone" value={technicianForm.phone} onChange={(event) => setTechnicianForm((current) => ({ ...current, phone: event.target.value }))} />
+          <input className="input" placeholder="Email (optional)" value={technicianForm.email} onChange={(event) => setTechnicianForm((current) => ({ ...current, email: event.target.value }))} />
+          <select className="input" value={technicianForm.serviceArea} onChange={(event) => setTechnicianForm((current) => ({ ...current, serviceArea: event.target.value }))}>
+            <option value="">Service area</option>
+            {areas.map((area) => <option key={area.remoteId} value={String(area.remoteId)}>{area.name}</option>)}
+          </select>
+        </div>
+        <Button variant="primary" size="sm" disabled={savingTechnician} onClick={() => void addTechnician()}>Add technician</Button>
+        {state.technicians.length === 0 ? <p className="text-sm text-muted">No technicians are listed yet.</p> : state.technicians.map((technician) => (
+          <div key={technician.id} className="flex items-center justify-between gap-3 border-t border-line pt-3 text-sm">
+            <span>
+              {technician.name}
+              <span className="block text-xs text-faint">{technician.phone}{technician.serviceAreaName ? ` · ${technician.serviceAreaName}` : ''}{technician.status ? ` · ${technician.status.toLowerCase()}` : ''}</span>
+            </span>
+            {pendingDelete === technician.id ? (
+              <span className="flex gap-2">
+                <Button size="sm" variant="danger" disabled={savingTechnician} onClick={() => void removeTechnician(technician.id)}>Delete</Button>
+                <Button size="sm" disabled={savingTechnician} onClick={() => setPendingDelete(null)}>Cancel</Button>
+              </span>
+            ) : (
+              <Button size="sm" disabled={savingTechnician} onClick={() => setPendingDelete(technician.id)}>Remove</Button>
+            )}
           </div>
         ))}
       </section>

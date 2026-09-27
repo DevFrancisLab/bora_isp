@@ -1,7 +1,9 @@
+from rest_framework import status
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 
 from apps.common.models import Activity, Technician
+from apps.common.serializers import TechnicianSerializer
 from apps.incidents.models import Incident
 from apps.incidents.serializers import IncidentSerializer
 from apps.network.models import ServiceArea
@@ -11,29 +13,33 @@ from apps.support.models import SupportCase
 from apps.support.serializers import SupportCaseSerializer
 
 
-@api_view(["GET"])
+@api_view(["GET", "POST"])
 def technician_list(request):
+    if request.method == "POST":
+        serializer = TechnicianSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        technician = serializer.save()
+        Activity.objects.create(text=f"Technician added · {technician.name}")
+        return Response(TechnicianSerializer(technician).data, status=status.HTTP_201_CREATED)
     technicians = Technician.objects.select_related("service_area")
-    return Response(
-        [
-            {
-                "id": item.id,
-                "name": item.name,
-                "phone_number": item.phone_number,
-                "email": item.email,
-                "status": item.status,
-                "service_area": item.service_area_id,
-                "service_area_name": item.service_area.name,
-            }
-            for item in technicians
-        ]
-    )
-from apps.incidents.serializers import IncidentSerializer
-from apps.network.models import ServiceArea
-from apps.network.serializers import ServiceAreaSerializer
-from apps.subscribers.models import Subscriber
-from apps.support.models import SupportCase
-from apps.support.serializers import SupportCaseSerializer
+    return Response(TechnicianSerializer(technicians, many=True).data)
+
+
+@api_view(["DELETE"])
+def technician_detail(request, pk):
+    technician = Technician.objects.filter(pk=pk).first()
+    if technician is None:
+        return Response({"detail": "Technician not found."}, status=status.HTTP_404_NOT_FOUND)
+    open_incident = technician.incidents.exclude(status=Incident.Status.RESOLVED).exists()
+    if open_incident:
+        return Response(
+            {"detail": "This technician is assigned to an open incident. Reassign that incident before deleting them."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+    name = technician.name
+    technician.delete()
+    Activity.objects.create(text=f"Technician removed · {name}")
+    return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 @api_view(["GET"])
