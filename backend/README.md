@@ -1,6 +1,6 @@
 # ISPBora backend
 
-Django and Django REST Framework foundation for the ISPBora support and outage workflow. The React dashboard is not connected to this API yet.
+Django and Django REST Framework API for the ISPBora operations console. The React dashboard in the repository root uses this API. Setup for the whole project is in the root [README](../README.md).
 
 ## Setup
 
