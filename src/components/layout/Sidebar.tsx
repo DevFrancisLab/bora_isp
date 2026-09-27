@@ -1,5 +1,6 @@
 import { NavLink } from 'react-router-dom';
-import { CreditCard, Headset, LayoutDashboard, MessageSquare, Package, RadioTower, Settings, Users, X } from 'lucide-react';
+import { CreditCard, Headset, LayoutDashboard, MessageSquare, Package, RadioTower, Settings, Sparkles, Users, X } from 'lucide-react';
+import { useAssistant } from '../assistant/AssistantPanel';
 import { IconButton } from '../ui/primitives';
 
 const GROUPS = [
@@ -27,6 +28,7 @@ const GROUPS = [
 ];
 
 export function Sidebar({ mobile = false, onNavigate }: { mobile?: boolean; onNavigate?: () => void }) {
+  const { openAssistant } = useAssistant();
   return (
     <aside className={mobile ? 'flex h-full w-[260px] flex-col bg-sidebar' : 'sticky top-0 hidden h-screen flex-col border-r border-line bg-sidebar lg:flex'}>
       <div className="flex items-center justify-between px-4 py-4">
@@ -44,6 +46,12 @@ export function Sidebar({ mobile = false, onNavigate }: { mobile?: boolean; onNa
           </span>
         </div>
         {mobile ? <IconButton label="Close navigation" onClick={onNavigate}><X size={16} /></IconButton> : null}
+      </div>
+      <div className="px-3 pb-3">
+        <button type="button" className="flex w-full items-center gap-2 rounded-lg bg-brand px-3 py-2 text-sm font-semibold text-[#05210F]" onClick={() => { openAssistant(); onNavigate?.(); }}>
+          <Sparkles size={16} />
+          AI Assistant
+        </button>
       </div>
       <nav aria-label="Primary" className="flex-1 space-y-5 overflow-y-auto px-3 pb-4">
         {GROUPS.map((group) => (

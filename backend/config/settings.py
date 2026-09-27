@@ -35,6 +35,7 @@ INSTALLED_APPS = [
     "apps.incidents",
     "apps.messaging",
     "apps.ussd",
+    "apps.ai.apps.AiConfig",
 ]
 
 MIDDLEWARE = [

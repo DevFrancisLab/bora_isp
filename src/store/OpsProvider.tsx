@@ -9,6 +9,7 @@ interface OpsContextValue {
   dispatch: (action: Action) => Promise<void>;
   simulateReport: () => Promise<void>;
   simulateOutage: () => Promise<void>;
+  reload: () => Promise<void>;
   createCustomerReport: (input: { subscriberId: string; issue: string; source: SupportCaseInput['source']; description: string }) => Promise<string>;
 }
 
@@ -115,6 +116,10 @@ export function OpsProvider({ children }: { children: ReactNode }) {
       state,
       dispatch: send,
       createCustomerReport,
+      reload: async () => {
+        const seed = await loadOperationsSnapshot();
+        dispatch({ type: 'HYDRATE', seed });
+      },
       simulateReport: async () => {
         const current = stateRef.current;
         const name = REPORT_QUEUE[reportCursor.current % REPORT_QUEUE.length];

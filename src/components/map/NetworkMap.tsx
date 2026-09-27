@@ -215,7 +215,7 @@ export function NetworkMap({
   return (
     <div className="surface relative h-[380px] overflow-hidden md:h-[480px] xl:h-[620px]">
       <div ref={holder} className="absolute inset-0" />
-      <div className="absolute left-3 top-3 z-[500] max-w-[210px] rounded-lg border border-line bg-card/95 p-2 text-xs shadow-lg">
+      <div className="absolute left-3 top-3 z-10 max-w-[210px] rounded-lg border border-line bg-card/95 p-2 text-xs shadow-lg">
         {([
           ['areas', 'Service Areas'],
           ['sites', 'Network Sites'],
@@ -228,11 +228,11 @@ export function NetworkMap({
           </label>
         ))}
       </div>
-      <div className="absolute right-3 top-3 z-[500] flex overflow-hidden rounded-lg border border-line bg-card/95 text-xs">
+      <div className="absolute right-3 top-3 z-10 flex overflow-hidden rounded-lg border border-line bg-card/95 text-xs">
         <button type="button" aria-pressed={basemap === 'street'} className={`px-3 py-2 ${basemap === 'street' ? 'bg-brand text-[#05210F]' : 'text-muted'}`} onClick={() => setBasemap('street')}>Street</button>
         <button type="button" aria-pressed={basemap === 'satellite'} className={`px-3 py-2 ${basemap === 'satellite' ? 'bg-brand text-[#05210F]' : 'text-muted'}`} onClick={() => setBasemap('satellite')}>Satellite</button>
       </div>
-      {tileNote ? <p className="absolute bottom-3 left-3 z-[500] max-w-xs rounded-md bg-card/95 px-2 py-1 text-xs text-warn">{tileNote}</p> : null}
+      {tileNote ? <p className="absolute bottom-3 left-3 z-10 max-w-xs rounded-md bg-card/95 px-2 py-1 text-xs text-warn">{tileNote}</p> : null}
     </div>
   );
 }

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Bell, Menu, PlayCircle, Search } from 'lucide-react';
+import { Bell, Menu, Search, Sparkles } from 'lucide-react';
+import { useAssistant } from '../assistant/AssistantPanel';
 import { formatClock, timeAgo } from '../../domain/format';
 import { activeIncidents } from '../../domain/network';
 import { useOps } from '../../store/OpsProvider';
@@ -21,10 +22,10 @@ const META: Record<string, { title: string; description: string }> = {
 export function Header({ onMenu }: { onMenu: () => void }) {
   const { pathname } = useLocation();
   const navigate = useNavigate();
-  const { state, dispatch, simulateReport, simulateOutage } = useOps();
+  const { state, dispatch } = useOps();
+  const { openAssistant } = useAssistant();
   const meta = META[pathname] ?? META['/dashboard'];
   const [notesOpen, setNotesOpen] = useState(false);
-  const [demoOpen, setDemoOpen] = useState(false);
   const [userOpen, setUserOpen] = useState(false);
   const unread = state.notifications.filter((item) => !item.read).length;
   const incidents = activeIncidents(state.incidents);
@@ -48,18 +49,16 @@ export function Header({ onMenu }: { onMenu: () => void }) {
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (!notesOpen && !demoOpen && !userOpen) return;
+    if (!notesOpen && !userOpen) return;
     const onPointer = (event: MouseEvent) => {
       if (!menuRef.current?.contains(event.target as Node)) {
         setNotesOpen(false);
-        setDemoOpen(false);
         setUserOpen(false);
       }
     };
     const onKey = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         setNotesOpen(false);
-        setDemoOpen(false);
         setUserOpen(false);
       }
     };
@@ -69,7 +68,7 @@ export function Header({ onMenu }: { onMenu: () => void }) {
       document.removeEventListener('mousedown', onPointer);
       document.removeEventListener('keydown', onKey);
     };
-  }, [notesOpen, demoOpen, userOpen]);
+  }, [notesOpen, userOpen]);
 
   const status = useMemo(() => {
     if (state.status !== 'ready') return { label: 'Checking network', className: 'text-muted' };
@@ -94,7 +93,7 @@ export function Header({ onMenu }: { onMenu: () => void }) {
   }
 
   return (
-    <header className="sticky top-0 z-30 border-b border-line bg-bg/95 px-4 py-3 backdrop-blur md:px-6">
+    <header className="sticky top-0 z-30 border-b border-line bg-bg px-4 py-3 md:px-6">
       <div className="flex items-start gap-3">
         <IconButton label="Open navigation" className="lg:hidden" onClick={onMenu}><Menu size={18} /></IconButton>
         <div className="min-w-0 flex-1">
@@ -108,27 +107,12 @@ export function Header({ onMenu }: { onMenu: () => void }) {
             <span className="text-xs">Ctrl K</span>
           </button>
           <IconButton label="Search" className="md:hidden" onClick={() => dispatch({ type: 'OPEN', dialog: { type: 'search' } })}><Search size={16} /></IconButton>
+          <button type="button" className="inline-flex items-center gap-1.5 rounded-lg bg-brand px-2.5 py-2 text-sm font-semibold text-[#05210F]" onClick={() => openAssistant()}>
+            <Sparkles size={14} />
+            <span className="hidden sm:inline">AI Assistant</span>
+          </button>
           <div className="relative">
-            <IconButton label="Demo controls" onClick={() => { setDemoOpen((open) => !open); setNotesOpen(false); setUserOpen(false); }}><PlayCircle size={16} /></IconButton>
-            {demoOpen ? (
-              <div className="absolute right-0 z-40 mt-2 w-72 rounded-xl border border-line bg-elevated p-2 shadow-xl">
-                <button type="button" className="block w-full rounded-lg px-3 py-2 text-left hover:bg-card" onClick={() => { simulateReport(); setDemoOpen(false); }}>
-                  <span className="block text-sm">Simulate Customer Report</span>
-                  <span className="block text-xs text-muted">WhatsApp report, case, map marker, and alert</span>
-                </button>
-                <button type="button" disabled={state.simulatingOutage} className="block w-full rounded-lg px-3 py-2 text-left hover:bg-card disabled:opacity-50" onClick={() => { void simulateOutage().finally(() => setDemoOpen(false)); }}>
-                  <span className="block text-sm">{state.simulatingOutage ? 'Simulating…' : 'Simulate Outage'}</span>
-                  <span className="block text-xs text-muted">Cluster reports, then open an incident</span>
-                </button>
-                <button type="button" className="block w-full rounded-lg px-3 py-2 text-left hover:bg-card" onClick={() => { dispatch({ type: 'FORCE_PAGE_ERROR' }); setDemoOpen(false); }}>
-                  <span className="block text-sm">Simulate load error</span>
-                  <span className="block text-xs text-muted">Shows the retry state on this page</span>
-                </button>
-              </div>
-            ) : null}
-          </div>
-          <div className="relative">
-            <IconButton label="Notifications" onClick={() => { setNotesOpen((open) => !open); setDemoOpen(false); setUserOpen(false); }}>
+            <IconButton label="Notifications" onClick={() => { setNotesOpen((open) => !open); setUserOpen(false); }}>
               <Bell size={16} />
               {unread ? <span className="absolute -right-1 -top-1 grid h-4 min-w-4 place-items-center rounded-full bg-brand px-1 text-[10px] font-semibold text-[#05210F]">{unread > 9 ? '9+' : unread}</span> : null}
             </IconButton>
@@ -167,7 +151,7 @@ export function Header({ onMenu }: { onMenu: () => void }) {
             {status.label}
           </button>
           <div className="relative">
-            <button type="button" className="grid h-9 w-9 place-items-center rounded-full bg-elevated text-xs font-semibold" aria-label="Account menu" onClick={() => { setUserOpen((open) => !open); setNotesOpen(false); setDemoOpen(false); }}>
+            <button type="button" className="grid h-9 w-9 place-items-center rounded-full bg-elevated text-xs font-semibold" aria-label="Account menu" onClick={() => { setUserOpen((open) => !open); setNotesOpen(false); }}>
               AH
             </button>
             {userOpen ? (

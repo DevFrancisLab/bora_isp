@@ -39,6 +39,8 @@ Copy `backend/.env.example` to `backend/.env`. Do not commit `.env`.
 | `DB_ENGINE` | Local development uses `django.db.backends.sqlite3`. |
 | `DB_NAME` | Optional SQLite path. Empty uses `backend/db.sqlite3`. |
 | `CORS_ALLOWED_ORIGINS` | Frontend origins, including Vite on port 5173. |
+| `GROQ_API_KEY` | Groq API key for the operator assistant. Stays on the server. |
+| `GROQ_MODEL` | Groq model id. The assistant stays unavailable until this is set. |
 
 Local development uses the SQLite file `backend/db.sqlite3`. Leave `DB_NAME` empty to use that path. Do not delete that file if it already contains demo data.
 

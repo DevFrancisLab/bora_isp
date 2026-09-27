@@ -6,6 +6,7 @@ import { healthLabel, areaHealth, incidentForArea, siteHealth, siteOpenIssues } 
 import { useOps } from '../../store/OpsProvider';
 import { Badge, Button, Field, Select } from '../ui/primitives';
 import { Drawer, Modal } from '../ui/overlays';
+import { useAssistant } from '../assistant/AssistantPanel';
 
 export function GlobalOverlays() {
   const { state, dispatch } = useOps();
@@ -353,6 +354,7 @@ function IncidentBody({ id }: { id: string }) {
 
 function SubscriberBody({ id }: { id: string }) {
   const { state, dispatch } = useOps();
+  const { openAssistant } = useAssistant();
   const subscriber = state.subscribers.find((item) => item.id === id);
   if (!subscriber) return null;
   const plan = state.plans.find((item) => item.id === subscriber.packageId);
@@ -368,6 +370,7 @@ function SubscriberBody({ id }: { id: string }) {
         <div><dt className="text-faint">Package</dt><dd>{plan?.name}</dd></div>
       </dl>
       <div className="flex flex-wrap gap-2">
+        <Button size="sm" onClick={() => openAssistant({ subscriberId: Number(id), subscriberName: subscriber.name })}>Ask AI about this customer</Button>
         <Button size="sm" onClick={() => dispatch({ type: 'OPEN', dialog: { type: 'message', subscriberId: id } })}>Contact Customer</Button>
         <Button size="sm" onClick={() => dispatch({ type: 'OPEN', dialog: { type: 'create-case', subscriberId: id } })}>Create Support Case</Button>
         {subscriber.status === 'active' ? <Button size="sm" variant="danger" onClick={() => dispatch({ type: 'OPEN', dialog: { type: 'suspend', id } })}>Suspend Service</Button> : null}

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import { useOps } from '../../store/OpsProvider';
+import { AssistantProvider } from '../assistant/AssistantPanel';
 import { GlobalOverlays } from '../overlays/GlobalOverlays';
 import { Header } from './Header';
 import { Sidebar } from './Sidebar';
@@ -11,6 +12,7 @@ export function DashboardLayout() {
   const { pathname } = useLocation();
   useEffect(() => setMobileOpen(false), [pathname]);
   return (
+    <AssistantProvider>
     <div className="min-h-screen bg-bg text-ink">
       <a href="#main" className="sr-only focus:not-sr-only focus:absolute focus:left-3 focus:top-3 focus:z-50 focus:rounded-md focus:bg-brand focus:px-3 focus:py-2 focus:text-[#05210F]">Skip to content</a>
       <div className="lg:grid lg:grid-cols-[240px_minmax(0,1fr)]">
@@ -23,7 +25,7 @@ export function DashboardLayout() {
         ) : null}
         <div className="min-w-0">
           <Header onMenu={() => setMobileOpen(true)} />
-          <main id="main" className="page-in min-w-0 p-4 md:p-6">
+          <main id="main" className="page-in relative z-0 min-w-0 p-4 md:p-6">
             <Outlet />
           </main>
         </div>
@@ -37,5 +39,6 @@ export function DashboardLayout() {
         ))}
       </div>
     </div>
+    </AssistantProvider>
   );
 }

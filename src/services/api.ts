@@ -270,3 +270,39 @@ export function createSupportCase(body: SupportCaseInput) {
 export function updateSupportCase(id: number, body: Record<string, unknown>) {
   return request<ApiSupportCase>(`/api/support/cases/${id}/`, { method: 'PATCH', body: JSON.stringify(body) });
 }
+
+export interface AssistantAction {
+  type: string;
+  label: string;
+  status: 'success' | 'failed' | 'unavailable' | 'queued';
+}
+
+export interface AssistantReply {
+  reply: string;
+  actions: AssistantAction[];
+}
+
+export interface AssistantHistoryTurn {
+  role: 'operator' | 'assistant';
+  content: string;
+}
+
+export interface AssistantRequest {
+  message: string;
+  channel?: 'dashboard' | 'whatsapp' | 'sms' | 'ussd' | 'voice';
+  context?: { subscriber_id?: number };
+  history?: AssistantHistoryTurn[];
+}
+
+export function askAssistant(body: AssistantRequest) {
+  return request<AssistantReply>('/api/ai/assistant/', { method: 'POST', body: JSON.stringify({ channel: 'dashboard', ...body }) });
+}
+
+export function assistantErrorMessage(error: unknown) {
+  if (!(error instanceof ApiError)) return 'The AI assistant is unavailable.';
+  const match = error.message.match(/"detail"\s*:\s*"([^"]+)"/);
+  if (match) return match[1];
+  if (error.status === 503) return 'The AI assistant is temporarily unavailable.';
+  if (error.message.includes('Unable to load dashboard data')) return 'The ISPBora API is not running.';
+  return 'The AI assistant could not answer that request.';
+}
