@@ -1,7 +1,6 @@
 import inspect
 import json
 import logging
-import os
 import re
 import time
 
@@ -16,8 +15,18 @@ from apps.ai.prompts import BILLING_REPLY, SYSTEM_PROMPT
 from apps.ai import tools as isp_tools
 
 logger = logging.getLogger("apps.ai")
+
+
+def operator_add(left, right):
+    return list(left or []) + list(right or [])
+
+
 BILLING_QUESTION = re.compile(
     r"\b(owe|owes|owing|balance|invoice|invoices|m-?pesa|how much|package price|expir(?:y|es|ed)|payment status)\b",
+    re.IGNORECASE,
+)
+DISCONNECTED_QUESTION = re.compile(
+    r"\b(?:disconnected|whose internet is (?:down|offline|disconnected))\b",
     re.IGNORECASE,
 )
 
@@ -25,10 +34,6 @@ BILLING_QUESTION = re.compile(
 class AssistantState(TypedDict):
     messages: Annotated[list, add_messages]
     actions: Annotated[list, operator_add]
-
-
-def operator_add(left, right):
-    return list(left or []) + list(right or [])
 
 
 class AssistantError(Exception):
@@ -117,9 +122,35 @@ def get_incident_assignment_context(incident_number: str) -> str:
 
 
 @tool
+def run_recorded_diagnostics(subscriber_id: int) -> str:
+    """Read the stored connection, service area, and active incidents for one subscriber. This does not run a live network probe or restore service."""
+    return json.dumps(isp_tools.run_recorded_diagnostics(subscriber_id))
+
+
+@tool
+def list_disconnected_subscribers(limit: int = 8) -> str:
+    """List subscribers whose stored connection status is OFFLINE. Returns a count and a short sample."""
+    return json.dumps(isp_tools.list_disconnected_subscribers(limit))
+
+
+@tool
+def explain_subscriber_decision(subscriber_id: int) -> str:
+    """Read stored facts and return the MeTTa troubleshooting decision for one subscriber. Does not create a case or assign a technician."""
+    from apps.ai.workflow import assess_subscriber
+
+    return json.dumps(assess_subscriber(subscriber_id))
+
+
+@tool
 def assign_incident_to_technician(incident_number: str, technician_id: int, reassign: bool = False) -> str:
     """Assign an open incident to an available technician. Call this when the operator names the technician, and when exactly one available technician shares the incident service area. Set reassign true only when the operator explicitly asks to replace the current technician."""
     return json.dumps(isp_tools.assign_incident_to_technician(incident_number, technician_id, reassign))
+
+
+def _explain_subscriber_decision(subscriber_id):
+    from apps.ai.workflow import assess_subscriber
+
+    return assess_subscriber(subscriber_id)
 
 
 TOOL_FUNCTIONS = {
@@ -136,6 +167,9 @@ TOOL_FUNCTIONS = {
     "get_incident_impact_summary": isp_tools.get_incident_impact_summary,
     "find_available_technicians": lambda service_area="", incident_number="", name="": isp_tools.find_available_technicians(service_area, incident_number, name),
     "get_incident_assignment_context": isp_tools.get_incident_assignment_context,
+    "run_recorded_diagnostics": isp_tools.run_recorded_diagnostics,
+    "list_disconnected_subscribers": isp_tools.list_disconnected_subscribers,
+    "explain_subscriber_decision": _explain_subscriber_decision,
     "assign_incident_to_technician": lambda incident_number, technician_id, reassign=False: isp_tools.assign_incident_to_technician(incident_number, technician_id, reassign),
 }
 MODEL_TOOLS = [
@@ -152,6 +186,9 @@ MODEL_TOOLS = [
     get_incident_impact_summary,
     find_available_technicians,
     get_incident_assignment_context,
+    run_recorded_diagnostics,
+    list_disconnected_subscribers,
+    explain_subscriber_decision,
     assign_incident_to_technician,
 ]
 
@@ -278,13 +315,12 @@ def _context_message(context):
 
 
 def build_model():
-    api_key = os.getenv("GROQ_API_KEY", "").strip()
-    model_name = os.getenv("GROQ_MODEL", "").strip()
-    if not api_key or not model_name:
-        raise AssistantError("The AI assistant is not configured.", "not_configured")
-    from langchain_groq import ChatGroq
+    from apps.ai.providers import ProviderNotConfigured, build_chat_model
 
-    return ChatGroq(model=model_name, api_key=api_key, temperature=0)
+    try:
+        return build_chat_model()
+    except ProviderNotConfigured:
+        raise AssistantError("The AI assistant is not configured.", "not_configured") from None
 
 
 HISTORY_LIMIT = 8
@@ -313,6 +349,15 @@ def run_assistant(*, message, context=None, channel="dashboard", history=None, m
     if BILLING_QUESTION.search(message or ""):
         logger.info("ai.assistant channel=%s tools= billing_unavailable duration_ms=0", channel)
         return {"reply": BILLING_REPLY, "actions": []}
+    if DISCONNECTED_QUESTION.search(message or ""):
+        found = isp_tools.list_disconnected_subscribers()
+        count = found["disconnected_count"]
+        noun = "subscriber" if count == 1 else "subscribers"
+        verb = "is" if count == 1 else "are"
+        names = ", ".join(item["name"] for item in found["subscribers"]) or "none"
+        sample = " The names are a sample." if found["sample_limited"] else ""
+        reply = f"{count} {noun} {verb} recorded as offline. Sample: {names}.{sample}"
+        return {"reply": reply, "actions": found["actions"], "provider": "records"}
     started = time.perf_counter()
     token = isp_tools.assistant_channel.set(channel or "dashboard")
     message_token = isp_tools.assistant_message.set(message or "")
@@ -332,13 +377,19 @@ def run_assistant(*, message, context=None, channel="dashboard", history=None, m
         if not reply:
             reply = "I could not complete that request from the available ISP data."
         actions = result.get("actions") or []
+        payload = {"reply": reply, "actions": actions}
+        provider = getattr(model, "last_provider", "")
+        if provider:
+            payload["provider"] = provider
+            if getattr(model, "used_fallback", False):
+                payload["provider"] = "groq"
         logger.info(
             "ai.assistant channel=%s tools=%s duration_ms=%s",
             channel,
             ",".join(item.get("type", "") for item in actions),
             int((time.perf_counter() - started) * 1000),
         )
-        return {"reply": reply, "actions": actions}
+        return payload
     except AssistantError:
         raise
     except Exception:

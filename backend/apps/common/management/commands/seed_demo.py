@@ -107,6 +107,9 @@ class Command(BaseCommand):
     def _clear(self):
         Notification.objects.all().delete()
         Message.objects.all().delete()
+        from apps.ai.models import AgentRun
+
+        AgentRun.objects.all().delete()
         IncidentReport.objects.all().delete()
         Incident.objects.all().delete()
         SupportCase.objects.all().delete()

@@ -699,3 +699,61 @@ def assign_incident_to_technician(incident_number, technician_id, reassign=False
         "technician_name": technician.name,
         "actions": [_action("incident_assignment", f"{incident.incident_number} assigned to {technician.name}", "success")],
     }
+
+
+def run_recorded_diagnostics(subscriber_id):
+    """Read stored connection and incident state. This does not run a live network probe."""
+    subscriber = _load_subscriber(subscriber_id)
+    if subscriber is None:
+        return {
+            "status": "failed",
+            "error": "Subscriber not found.",
+            "outcome": "diagnostics-not-run",
+            "actions": [_action("diagnostics", "Subscriber not found", "failed")],
+        }
+    incidents = _active_incidents_for(subscriber)
+    area_status = subscriber.service_area.status
+    connection = subscriber.connection_status
+    if (
+        connection == Subscriber.ConnectionStatus.ONLINE
+        and not incidents
+        and area_status == ServiceArea.Status.OPERATIONAL
+    ):
+        outcome = "diagnostics-success"
+        detail = "Recorded connection is online, the service area is operational, and no active incident is open."
+    elif connection == Subscriber.ConnectionStatus.OFFLINE or area_status == ServiceArea.Status.OUTAGE:
+        outcome = "diagnostics-failed"
+        detail = "Recorded state is offline or the service area is in outage. No remote restore command was run."
+    else:
+        outcome = "diagnostics-not-run"
+        detail = "No live probe was run. The stored connection is not a clear offline or healthy result."
+    return {
+        "status": "success",
+        "outcome": outcome,
+        "detail": detail,
+        "connection_status": connection,
+        "service_area_status": area_status,
+        "active_incident_count": len(incidents),
+        "actions": [_action("diagnostics", detail, "success")],
+    }
+
+
+def list_disconnected_subscribers(limit=8):
+    try:
+        limit = int(limit)
+    except (TypeError, ValueError):
+        limit = 8
+    limit = min(max(limit, 1), 8)
+    queryset = Subscriber.objects.select_related("service_area").filter(
+        connection_status=Subscriber.ConnectionStatus.OFFLINE
+    ).order_by("full_name")
+    count = queryset.count()
+    sample = list(queryset[:limit])
+    noun = "subscriber" if count == 1 else "subscribers"
+    return {
+        "status": "success",
+        "disconnected_count": count,
+        "sample_limited": count > len(sample),
+        "subscribers": [_subscriber_payload(item) for item in sample],
+        "actions": [_action("subscriber_lookup", f"Found {count} disconnected {noun}", "success")],
+    }

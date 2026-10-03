@@ -39,8 +39,13 @@ Copy `backend/.env.example` to `backend/.env`. Do not commit `.env`.
 | `DB_ENGINE` | Local development uses `django.db.backends.sqlite3`. |
 | `DB_NAME` | Optional SQLite path. Empty uses `backend/db.sqlite3`. |
 | `CORS_ALLOWED_ORIGINS` | Frontend origins, including Vite on port 5173. |
-| `GROQ_API_KEY` | Groq API key for the operator assistant. Stays on the server. |
-| `GROQ_MODEL` | Groq model id. The assistant stays unavailable until this is set. |
+| `GROQ_API_KEY` | Groq API key. Fallback provider for the assistant. Stays on the server. |
+| `GROQ_MODEL` | Groq model id, for example `llama-3.3-70b-versatile`. |
+| `BASIX_API_KEY` | Primary provider key. Never commit it. |
+| `BASIX_BASE_URL` | Defaults to `https://llm.c.singularitynet.io/v1`. |
+| `BASIX_MODEL` | Defaults to `qwen/qwen3.8-27b`. `qwen/qwen3.5-35b-a3b` was not served by the endpoint. |
+| `BASIX_EMBEDDING_MODEL` | Defaults to `BAAI/bge-base-en-v1.5`. |
+| `BASIX_TIMEOUT` | Seconds before a BASIX call is treated as a provider failure. |
 
 Local development uses the SQLite file `backend/db.sqlite3`. Leave `DB_NAME` empty to use that path. Do not delete that file if it already contains demo data.
 
@@ -106,7 +111,9 @@ GET    /api/notifications/
 GET    /api/technicians/
 GET    /api/dashboard/summary/
 
-POST   /ussd                         Africa's Talking USSD callback. Plain text, no trailing slash.
+POST   /api/ai/assistant/        Operator assistant.
+POST   /api/ai/customer/         Customer troubleshooting workflow.
+POST   /ussd                     Africa's Talking USSD callback. Plain text, no trailing slash.
 ```
 
 Subscriber search uses `search`. Filters: `status`, `service_area`, `connection_status`.

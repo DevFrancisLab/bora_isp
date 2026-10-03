@@ -288,6 +288,8 @@ export interface AssistantAction {
 export interface AssistantReply {
   reply: string;
   actions: AssistantAction[];
+  provider?: string;
+  decision?: string;
 }
 
 export interface AssistantHistoryTurn {
@@ -304,6 +306,10 @@ export interface AssistantRequest {
 
 export function askAssistant(body: AssistantRequest) {
   return request<AssistantReply>('/api/ai/assistant/', { method: 'POST', body: JSON.stringify({ channel: 'dashboard', ...body }) });
+}
+
+export function askCustomerWorkflow(body: { message: string; phone?: string; channel?: 'whatsapp' | 'sms' | 'dashboard'; context?: { subscriber_id?: number } }) {
+  return request<AssistantReply>('/api/ai/customer/', { method: 'POST', body: JSON.stringify({ channel: 'whatsapp', ...body }) });
 }
 
 export function assistantErrorMessage(error: unknown) {

@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useRef, useState, type Dispatch, type FormEvent, type ReactNode, type SetStateAction } from 'react';
 import { createPortal } from 'react-dom';
 import { SquarePen, X } from 'lucide-react';
-import { askAssistant, assistantErrorMessage, type AssistantAction } from '../../services/api';
+import { askAssistant, askCustomerWorkflow, assistantErrorMessage, type AssistantAction } from '../../services/api';
 import { useOps } from '../../store/OpsProvider';
 import { IconButton } from '../ui/primitives';
 
@@ -15,6 +15,8 @@ interface Turn {
   role: 'operator' | 'assistant';
   text: string;
   actions?: AssistantAction[];
+  provider?: string;
+  decision?: string;
   error?: boolean;
 }
 
@@ -25,11 +27,13 @@ interface AssistantContextValue {
 const AssistantContext = createContext<AssistantContextValue | null>(null);
 
 const PROMPTS = [
-  "What's happening with customer 0712345678?",
-  'Show active outages affecting this customer',
-  'Does this customer have an open case?',
+  "What's happening with customer 0712438221?",
+  'Show me customers whose internet is disconnected.',
+  'Does this customer need a technician?',
   'Create a support case for this customer',
 ];
+
+const CUSTOMER_DEMO = 'Internet yangu imekuwa down tangu asubuhi.';
 
 export function AssistantProvider({ children }: { children: ReactNode }) {
   const [open, setOpen] = useState(false);
@@ -116,8 +120,35 @@ function AssistantDrawer({ open, target, turns, setTurns, onClose }: { open: boo
         context: target.subscriberId ? { subscriber_id: target.subscriberId } : undefined,
       });
       if (requestRef.current !== requestId) return;
-      setTurns((current) => [...current, { id: crypto.randomUUID(), role: 'assistant', text: result.reply, actions: result.actions }]);
-      if (result.actions.some((item) => item.type === 'support_case_created' && item.status === 'success')) {
+      setTurns((current) => [...current, { id: crypto.randomUUID(), role: 'assistant', text: result.reply, actions: result.actions, provider: result.provider, decision: result.decision }]);
+      if (result.actions.some((item) => (item.type === 'support_case_created' || item.type === 'incident_assignment') && item.status === 'success')) {
+        await reload().catch(() => undefined);
+      }
+    } catch (error) {
+      if (requestRef.current !== requestId) return;
+      setTurns((current) => [...current, { id: crypto.randomUUID(), role: 'assistant', text: assistantErrorMessage(error), error: true }]);
+    } finally {
+      if (requestRef.current === requestId) setPending(false);
+    }
+  }
+
+  async function submitCustomer() {
+    const message = CUSTOMER_DEMO;
+    if (pending) return;
+    const requestId = ++requestRef.current;
+    setConfirmNew(false);
+    setDraft('');
+    setPending(true);
+    setTurns((current) => [...current, { id: crypto.randomUUID(), role: 'operator', text: message }]);
+    try {
+      const result = await askCustomerWorkflow({
+        message,
+        phone: '0712438221',
+        channel: 'whatsapp',
+      });
+      if (requestRef.current !== requestId) return;
+      setTurns((current) => [...current, { id: crypto.randomUUID(), role: 'assistant', text: result.reply, actions: result.actions, provider: result.provider, decision: result.decision }]);
+      if (result.actions.some((item) => (item.type === 'support_case_created' || item.type === 'incident_assignment') && item.status === 'success')) {
         await reload().catch(() => undefined);
       }
     } catch (error) {
@@ -140,7 +171,7 @@ function AssistantDrawer({ open, target, turns, setTurns, onClose }: { open: boo
         <header className="flex items-start justify-between gap-3 border-b border-line px-4 py-4">
           <div className="min-w-0">
             <h2 className="text-lg font-semibold">AI Operations Assistant</h2>
-            <p className="mt-1 text-sm text-muted">Ask about subscribers, outages, and support cases.</p>
+            <p className="mt-1 text-sm text-muted">Ask about subscribers, outages, and support cases. BASIX answers when it is configured. Groq remains the fallback.</p>
             {target.subscriberName ? <p className="mt-1 text-xs text-faint">Viewing {target.subscriberName}</p> : null}
           </div>
           <div className="flex shrink-0 items-center gap-1">
@@ -160,7 +191,10 @@ function AssistantDrawer({ open, target, turns, setTurns, onClose }: { open: boo
         <div ref={listRef} className="flex-1 space-y-3 overflow-y-auto overscroll-contain p-4">
           {turns.length === 0 ? (
             <div className="space-y-2">
-              <p className="text-sm text-muted">Internal tool for ISP operators.</p>
+              <p className="text-sm text-muted">Internal tool for ISP operators. The customer demo uses the seeded WhatsApp line for Mary Wanjiku.</p>
+              <button type="button" className="block w-full rounded-lg border border-line bg-card px-3 py-2 text-left text-sm hover:bg-elevated" onClick={() => void submitCustomer()}>
+                Customer demo: {CUSTOMER_DEMO}
+              </button>
               {PROMPTS.map((prompt) => (
                 <button key={prompt} type="button" className="block w-full rounded-lg border border-line bg-card px-3 py-2 text-left text-sm hover:bg-elevated" onClick={() => void submit(prompt)}>
                   {prompt}
@@ -171,6 +205,11 @@ function AssistantDrawer({ open, target, turns, setTurns, onClose }: { open: boo
             <article key={turn.id} className={turn.role === 'operator' ? 'ml-8 rounded-lg bg-card px-3 py-2' : 'mr-8 rounded-lg border border-line px-3 py-2'}>
               <p className="text-[11px] uppercase text-faint">{turn.role === 'operator' ? 'ISP Operator' : 'ISPBora Assistant'}</p>
               <p className={`mt-1 whitespace-pre-wrap text-sm ${turn.error ? 'text-warn' : ''}`}>{turn.text}</p>
+              {turn.decision || turn.provider ? (
+                <p className="mt-1 text-[11px] uppercase text-faint">
+                  {[turn.decision, turn.provider ? `provider ${turn.provider}` : ''].filter(Boolean).join(' · ')}
+                </p>
+              ) : null}
               {turn.actions && turn.actions.length > 0 ? (
                 <div className="mt-2 border-t border-line pt-2">
                   <p className="text-[11px] uppercase text-faint">Agent activity</p>

@@ -294,7 +294,7 @@ class AssistantApiTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
     def test_missing_provider_configuration(self):
-        with patch.dict(os.environ, {"GROQ_API_KEY": "", "GROQ_MODEL": ""}):
+        with patch.dict(os.environ, {"GROQ_API_KEY": "", "GROQ_MODEL": "", "BASIX_API_KEY": ""}, clear=False):
             response = self.client.post(reverse("ai-assistant"), {"message": "Any active outages?"}, format="json")
         self.assertEqual(response.status_code, status.HTTP_503_SERVICE_UNAVAILABLE)
         self.assertIn("not configured", response.data["detail"])
